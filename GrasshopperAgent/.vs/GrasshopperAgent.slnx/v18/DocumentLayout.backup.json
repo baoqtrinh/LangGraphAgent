@@ -1,0 +1,49 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{91B1D39E-328B-4F48-A277-4B3ABD12F90C}|GrasshopperAgent.csproj|c:\\users\\baoqt\\onedrive\\documents\\github\\langgraphagent\\grasshopperagent\\grasshopperagentcomponent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{91B1D39E-328B-4F48-A277-4B3ABD12F90C}|GrasshopperAgent.csproj|solutionrelative:grasshopperagentcomponent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 3,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "GrasshopperAgentComponent.cs",
+              "DocumentMoniker": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\GrasshopperAgentComponent.cs",
+              "RelativeDocumentMoniker": "GrasshopperAgentComponent.cs",
+              "ToolTip": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\GrasshopperAgentComponent.cs",
+              "RelativeToolTip": "GrasshopperAgentComponent.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-05T08:13:37.497Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

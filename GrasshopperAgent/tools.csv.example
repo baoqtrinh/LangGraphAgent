@@ -1,0 +1,31 @@
+# GH Tool Server — tools.csv
+#
+# Place this file (rename to tools.csv) in the same folder as your .gh scripts.
+# Each row describes one tool the agent can call.
+#
+# COLUMNS
+# -------
+# filename     : the .gh file name (including .gh extension)
+# name         : tool name used by the agent (snake_case, no spaces)
+# description  : what the tool does (shown to the LLM — be specific!)
+# inputs       : semicolon-separated pairs of  paramName:description
+#                The paramName must EXACTLY match the NickName of a slider
+#                or panel in your .gh file (case-sensitive)
+# outputs      : same format — the paramName must match a panel NickName
+#
+# EXAMPLE .gh FILE SETUP
+# -----------------------
+# Add a Number Slider and rename its NickName to "width"
+# Add another slider, rename to "length"
+# Add a Panel and rename to "area" — this is your output
+# Your formula: Connect Panel to Multiplication of width × length
+#
+# HOW STUDENTS SET NICKNAMES
+# --------------------------
+# Right-click a Slider or Panel → "Edit NickName" (or just double-click)
+#
+filename,name,description,inputs,outputs
+floor_area.gh,calculate_floor_area,Calculate the floor area of a rectangular room given width and length in meters,width:Width of the room in meters;length:Length of the room in meters,area:Total floor area in square meters
+stair_calc.gh,calculate_stairs,Calculate riser and tread dimensions for a staircase,floor_height:Floor-to-floor height in mm;tread_depth:Depth of each tread in mm,riser_height:Height of each riser in mm;riser_count:Number of risers
+sun_analysis.gh,analyze_sun_hours,Estimate daily sun hours on a south-facing facade,orientation:Facade orientation in degrees from north (0=north 180=south);latitude:Site latitude in decimal degrees,sun_hours:Estimated daily sun hours;peak_month:Month with most sun exposure
+window_ratio.gh,check_window_ratio,Check if window area meets minimum daylight requirements,floor_area:Room floor area in square meters;window_area:Total window area in square meters,ratio:Window-to-floor ratio as percentage;compliant:yes if ratio >= 10% else no
