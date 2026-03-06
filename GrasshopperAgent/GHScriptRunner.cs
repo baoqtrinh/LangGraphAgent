@@ -103,7 +103,7 @@ namespace GrasshopperAgent
 
         // ── Value setters ─────────────────────────────────────────────────────
 
-        private static void SetObjectValue(IGH_ActiveObject obj, string rawValue)
+        private static void SetObjectValue(IGH_DocumentObject obj, string rawValue)
         {
             switch (obj)
             {
