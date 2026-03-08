@@ -2,6 +2,7 @@
 /GrasshopperAgent/.vs
 /GrasshopperAgent/obj
 .env
+.vs
 __pycache__
 /GrasshopperAgent/obj
 /GrasshopperAgent/obj
