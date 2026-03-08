@@ -59,11 +59,12 @@ namespace GrasshopperAgent
         public Dictionary<string, string> Execute(
             string filePath,
             Dictionary<string, string> inputs,
-            IEnumerable<string> outputNames)
+            IEnumerable<string> outputNames,
+            string toolGroupName = "")
         {
             return ShowInCanvas
-                ? ExecuteInActiveWindow(filePath, inputs, outputNames)
-                : ExecuteInBackground(filePath, inputs, outputNames);
+                ? ExecuteInActiveWindow(filePath, inputs, outputNames, toolGroupName)
+                : ExecuteInBackground(filePath, inputs, outputNames, toolGroupName);
         }
 
         // ── Hidden in-memory execution ────────────────────────────────────────
@@ -71,7 +72,8 @@ namespace GrasshopperAgent
         private Dictionary<string, string> ExecuteInBackground(
             string filePath,
             Dictionary<string, string> inputs,
-            IEnumerable<string> outputNames)
+            IEnumerable<string> outputNames,
+            string toolGroupName = "")
         {
             var result = new Dictionary<string, string>();
             Exception? runError = null;
@@ -92,18 +94,25 @@ namespace GrasshopperAgent
 
                     doc.Enabled = true;
 
-                    // ── Set inputs by NickName ─────────────────────────────────
+                    // ── Resolve TOOL_ group scope (optional) ──────────────────────
+                    HashSet<Guid>? scopedInputIds  = null;
+                    HashSet<Guid>? scopedOutputIds = null;
+                    if (!string.IsNullOrEmpty(toolGroupName))
+                        ResolveToolGroupScope(doc, toolGroupName, out scopedInputIds, out scopedOutputIds);
+
+                    // ── Set inputs by NickName ──────────────────────────────────
                     foreach (var obj in doc.Objects)
                     {
+                        if (scopedInputIds != null && !scopedInputIds.Contains(obj.InstanceGuid)) continue;
                         if (inputs.TryGetValue(obj.NickName, out var rawValue))
                             SetObjectValue(obj, rawValue);
                     }
 
-                    // ── Run solution ───────────────────────────────────────────
+                    // ── Run solution ─────────────────────────────────────────────
                     doc.NewSolution(false);   // false = synchronous
 
                     // ── Read & bake outputs ────────────────────────────────────
-                    CollectOutputs(doc, outputSet, result, BakeToViewport);
+                    CollectOutputs(doc, outputSet, result, BakeToViewport, scopedOutputIds);
 
                     doc.Dispose();
                 }
@@ -132,7 +141,8 @@ namespace GrasshopperAgent
         private Dictionary<string, string> ExecuteInActiveWindow(
             string filePath,
             Dictionary<string, string> inputs,
-            IEnumerable<string> outputNames)
+            IEnumerable<string> outputNames,
+            string toolGroupName = "")
         {
             var result = new Dictionary<string, string>();
             Exception? runError = null;
@@ -159,18 +169,25 @@ namespace GrasshopperAgent
                     canvas.Document = doc;
                     canvas.Refresh();
 
-                    // ── Set inputs by NickName ─────────────────────────────────
+                    // ── Resolve TOOL_ group scope (optional) ──────────────────────
+                    HashSet<Guid>? scopedInputIds  = null;
+                    HashSet<Guid>? scopedOutputIds = null;
+                    if (!string.IsNullOrEmpty(toolGroupName))
+                        ResolveToolGroupScope(doc, toolGroupName, out scopedInputIds, out scopedOutputIds);
+
+                    // ── Set inputs by NickName ──────────────────────────────────
                     foreach (var obj in doc.Objects)
                     {
+                        if (scopedInputIds != null && !scopedInputIds.Contains(obj.InstanceGuid)) continue;
                         if (inputs.TryGetValue(obj.NickName, out var rawValue))
                             SetObjectValue(obj, rawValue);
                     }
 
-                    // ── Run solution ───────────────────────────────────────────
+                    // ── Run solution ─────────────────────────────────────────────
                     doc.NewSolution(false);   // false = synchronous
 
                     // ── Read & bake outputs ────────────────────────────────────
-                    CollectOutputs(doc, outputSet, result, BakeToViewport);
+                    CollectOutputs(doc, outputSet, result, BakeToViewport, scopedOutputIds);
 
                     // ── Optionally remove after execution ──────────────────────
                     if (!KeepOpen)
@@ -248,12 +265,14 @@ namespace GrasshopperAgent
             GH_Document doc,
             HashSet<string> outputSet,
             Dictionary<string, string> result,
-            bool bake)
+            bool bake,
+            HashSet<Guid>? scopedOutputIds = null)
         {
             bool didBake = false;
 
             foreach (var obj in doc.Objects)
             {
+                if (scopedOutputIds != null && !scopedOutputIds.Contains(obj.InstanceGuid)) continue;
                 if (!outputSet.Contains(obj.NickName)) continue;
                 if (obj is not IGH_Param param) continue;
 
@@ -288,6 +307,38 @@ namespace GrasshopperAgent
 
             if (didBake)
                 RhinoDoc.ActiveDoc?.Views.Redraw();
+        }
+
+        /// <summary>
+        /// Finds the TOOL_ group by label and populates input/output scope sets from
+        /// its INPUT and OUTPUT sub-groups so execution only touches the right params.
+        /// </summary>
+        private static void ResolveToolGroupScope(
+            GH_Document doc,
+            string toolGroupName,
+            out HashSet<Guid>? inputIds,
+            out HashSet<Guid>? outputIds)
+        {
+            inputIds  = null;
+            outputIds = null;
+            var byId  = doc.Objects.ToDictionary(o => o.InstanceGuid);
+
+            foreach (var obj in doc.Objects)
+            {
+                if (obj is not GH_Group tg) continue;
+                if (!(tg.NickName?.Trim() ?? "").Equals(toolGroupName, StringComparison.OrdinalIgnoreCase)) continue;
+
+                foreach (var mid in tg.ObjectIDs)
+                {
+                    if (!byId.TryGetValue(mid, out var m) || m is not GH_Group sub) continue;
+                    var lbl = sub.NickName?.Trim() ?? "";
+                    if (lbl.Equals("INPUT",  StringComparison.OrdinalIgnoreCase))
+                        inputIds  = new HashSet<Guid>(sub.ObjectIDs);
+                    else if (lbl.Equals("OUTPUT", StringComparison.OrdinalIgnoreCase))
+                        outputIds = new HashSet<Guid>(sub.ObjectIDs);
+                }
+                break;
+            }
         }
 
         /// <summary>

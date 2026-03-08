@@ -15,10 +15,11 @@ namespace GrasshopperAgent.Protocol
     // ── Tool definition sent to Python ────────────────────────────────────────
 
     public record ToolDefinition(
-        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("name")]        string Name,
         [property: JsonPropertyName("description")] string Description,
-        [property: JsonPropertyName("inputSchema")] InputSchema InputSchema,
-        [property: JsonPropertyName("categories")] string[] Categories
+        [property: JsonPropertyName("inputSchema")]  InputSchema InputSchema,
+        [property: JsonPropertyName("categories")]  string[] Categories,
+        [property: JsonPropertyName("outputs")]     Dictionary<string, string> Outputs
     );
 
     public record InputSchema(

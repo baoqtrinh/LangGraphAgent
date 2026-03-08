@@ -1,7 +1,14 @@
 from models.state import BoxState
-from utils.llm_utils import llm
+from utils.llm_utils import llm, fast_llm
 from tools.search_tools import search_web
 import json
+import textwrap
+
+def _think(label: str, text: str):
+    prefix = f"  ┊ {label}: "
+    body = str(text).strip().replace("\n", " ")
+    for i, line in enumerate(textwrap.wrap(body, width=68)):
+        print((prefix if i == 0 else " " * len(prefix)) + line)
 
 def determine_search_need_fn(state: BoxState) -> BoxState:
     """Determine if a web search is needed to answer the general question."""
@@ -20,10 +27,11 @@ def determine_search_need_fn(state: BoxState) -> BoxState:
     Respond with only "Yes" or "No".
     """
     
-    response = llm(prompt)
+    response = fast_llm(prompt)    # yes/no — short timeout is fine
     search_needed = "yes" in str(response).lower()
 
     state.needs_search = search_needed
+    _think("search needed", str(search_needed))
 
     if search_needed:
         # Create a search query based on the user input
@@ -36,6 +44,7 @@ def determine_search_need_fn(state: BoxState) -> BoxState:
 
         search_query = str(llm(prompt)).strip()
         state.search_query = search_query
+        _think("search query", search_query)
     
     state.history.append({
         "node": "determine_search_need",

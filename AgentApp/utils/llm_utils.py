@@ -134,11 +134,7 @@ class ChatLocalLLM(BaseChatModel):
             return ChatResult(generations=[ChatGeneration(message=ai_msg)])
 
         except Exception as exc:
-            return ChatResult(
-                generations=[
-                    ChatGeneration(message=AIMessage(content=f"[LLM error] {exc}"))
-                ]
-            )
+            raise RuntimeError(f"LLM request failed: {exc}") from exc
 
 
 # ── Backwards-compatible simple call helper ──────────────────────────────────
@@ -148,8 +144,8 @@ class ChatLocalLLM(BaseChatModel):
 class _SimpleLLMShim:
     """Thin wrapper: exposes __call__(prompt) -> str and a .chat property."""
 
-    def __init__(self) -> None:
-        self._chat = ChatLocalLLM()
+    def __init__(self, timeout: Optional[int] = None) -> None:
+        self._chat = ChatLocalLLM() if timeout is None else ChatLocalLLM(timeout=timeout)
 
     def __call__(self, prompt: str, **_: Any) -> str:
         result = self._chat._generate([HumanMessage(content=prompt)])
@@ -160,5 +156,6 @@ class _SimpleLLMShim:
         return self._chat
 
 
-llm = _SimpleLLMShim()
+llm      = _SimpleLLMShim()          # default timeout (60s) — for full responses
+fast_llm = _SimpleLLMShim(timeout=15) # short timeout — for classify / yes-no calls
 chat_llm = ChatLocalLLM()

@@ -9,3 +9,6 @@ __pycache__
 /GrasshopperAgent/.vs
 /.vscode
 /GrasshopperAgent/.vs
+/GrasshopperAgent/bin
+/GrasshopperAgent/.vs
+*.db

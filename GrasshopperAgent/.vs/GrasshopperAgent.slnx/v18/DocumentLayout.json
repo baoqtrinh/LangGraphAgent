@@ -1,32 +1,7 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\",
-  "Documents": [
-    {
-      "AbsoluteMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|c:\\users\\baoqt\\onedrive\\documents\\github\\langgraphagent\\grasshopperagent\\grasshopperagentcomponent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|solutionrelative:grasshopperagentcomponent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|c:\\users\\baoqt\\onedrive\\documents\\github\\langgraphagent\\grasshopperagent\\ghscriptrunner.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|solutionrelative:ghscriptrunner.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|c:\\users\\baoqt\\onedrive\\documents\\github\\langgraphagent\\grasshopperagent\\httpmcpserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|solutionrelative:httpmcpserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|c:\\users\\baoqt\\onedrive\\documents\\github\\langgraphagent\\grasshopperagent\\toolregistry.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|solutionrelative:toolregistry.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|c:\\users\\baoqt\\onedrive\\documents\\github\\langgraphagent\\grasshopperagent\\protocol\\mcpprotocol.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|solutionrelative:protocol\\mcpprotocol.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|c:\\users\\baoqt\\onedrive\\documents\\github\\langgraphagent\\grasshopperagent\\grasshopperagent.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{EF85A85E-7725-8CC7-1F98-F3D570D495EF}|GrasshopperAgent.csproj|solutionrelative:grasshopperagent.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    }
-  ],
+  "WorkspaceRootPath": "C:\\Users\\Admin\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\",
+  "Documents": [],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
@@ -34,97 +9,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 8,
+          "SelectedChildIndex": -1,
           "Children": [
             {
               "$type": "Bookmark",
-              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
-            },
-            {
-              "$type": "Bookmark",
               "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "HttpMCPServer.cs",
-              "DocumentMoniker": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\HttpMCPServer.cs",
-              "RelativeDocumentMoniker": "HttpMCPServer.cs",
-              "ToolTip": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\HttpMCPServer.cs",
-              "RelativeToolTip": "HttpMCPServer.cs",
-              "ViewState": "AgIAAJkAAAAAAAAAAAAAwAgAAAASAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-06T03:55:07.284Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "GHScriptRunner.cs",
-              "DocumentMoniker": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\GHScriptRunner.cs",
-              "RelativeDocumentMoniker": "GHScriptRunner.cs",
-              "ToolTip": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\GHScriptRunner.cs",
-              "RelativeToolTip": "GHScriptRunner.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAG0AAAAsAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-06T03:55:02.822Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "ToolRegistry.cs",
-              "DocumentMoniker": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\ToolRegistry.cs",
-              "RelativeDocumentMoniker": "ToolRegistry.cs",
-              "ToolTip": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\ToolRegistry.cs",
-              "RelativeToolTip": "ToolRegistry.cs",
-              "ViewState": "AgIAAIEAAAAAAAAAAAAAwI4AAAAbAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-06T03:54:22.529Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "MCPProtocol.cs",
-              "DocumentMoniker": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\Protocol\\MCPProtocol.cs",
-              "RelativeDocumentMoniker": "Protocol\\MCPProtocol.cs",
-              "ToolTip": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\Protocol\\MCPProtocol.cs",
-              "RelativeToolTip": "Protocol\\MCPProtocol.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAhAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-06T03:54:09.695Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "GrasshopperAgent.csproj",
-              "DocumentMoniker": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\GrasshopperAgent.csproj",
-              "RelativeDocumentMoniker": "GrasshopperAgent.csproj",
-              "ToolTip": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\GrasshopperAgent.csproj",
-              "RelativeToolTip": "GrasshopperAgent.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAA1AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-03-06T03:53:31.371Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "GrasshopperAgentComponent.cs",
-              "DocumentMoniker": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\GrasshopperAgentComponent.cs",
-              "RelativeDocumentMoniker": "GrasshopperAgentComponent.cs",
-              "ToolTip": "C:\\Users\\baoqt\\OneDrive\\Documents\\GitHub\\LangGraphAgent\\GrasshopperAgent\\GrasshopperAgentComponent.cs",
-              "RelativeToolTip": "GrasshopperAgentComponent.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-05T08:13:37.497Z",
-              "EditorCaption": ""
             }
           ]
         }

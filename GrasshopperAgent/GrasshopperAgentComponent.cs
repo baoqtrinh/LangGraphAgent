@@ -83,8 +83,9 @@ namespace GrasshopperAgent
         {
             pm.AddTextParameter("Status", "S", "Server status message", GH_ParamAccess.item);
             pm.AddIntegerParameter("Tools", "T", "Number of GH tools loaded", GH_ParamAccess.item);
-            pm.AddTextParameter("URL", "U", "Base URL of the running server", GH_ParamAccess.item);
-        }
+            pm.AddTextParameter("URL", "U", "Base URL of the running server", GH_ParamAccess.item);            pm.AddTextParameter("ToolDetails", "D",
+                "One entry per loaded tool showing its name, description, inputs and outputs.",
+                GH_ParamAccess.list);        }
 
         // ── Solve ─────────────────────────────────────────────────────────────
         protected override void SolveInstance(IGH_DataAccess da)
@@ -109,6 +110,7 @@ namespace GrasshopperAgent
                 da.SetData("Status", "Server stopped");
                 da.SetData("Tools", 0);
                 da.SetData("URL", "");
+                da.SetDataList("ToolDetails", new string[0]);
                 return;
             }
 
@@ -119,6 +121,7 @@ namespace GrasshopperAgent
                 da.SetData("Status", $"Error: folder not found — {folder}");
                 da.SetData("Tools", 0);
                 da.SetData("URL", "");
+                da.SetDataList("ToolDetails", new string[0]);
                 return;
             }
 
@@ -149,6 +152,7 @@ namespace GrasshopperAgent
                     da.SetData("Status", $"Running — {registry.Tools.Count} tool(s) loaded");
                     da.SetData("Tools", registry.Tools.Count);
                     da.SetData("URL", _server.BaseUrl);
+                    da.SetDataList("ToolDetails", BuildToolDetails(registry));
                 }
                 catch (Exception ex)
                 {
@@ -156,14 +160,40 @@ namespace GrasshopperAgent
                     da.SetData("Status", $"Error: {ex.Message}");
                     da.SetData("Tools", 0);
                     da.SetData("URL", "");
+                    da.SetDataList("ToolDetails", new string[0]);
                 }
             }
             else
             {
+                var liveRegistry = new ToolRegistry(folder);
                 da.SetData("Status", $"Running on port {port}");
-                da.SetData("Tools", new ToolRegistry(folder).Tools.Count);
+                da.SetData("Tools", liveRegistry.Tools.Count);
                 da.SetData("URL", _server?.BaseUrl ?? "");
+                da.SetDataList("ToolDetails", BuildToolDetails(liveRegistry));
             }
+        }
+
+        // ── Tool detail formatter ────────────────────────────────────────────
+        private static System.Collections.Generic.List<string> BuildToolDetails(ToolRegistry registry)
+        {
+            var lines = new System.Collections.Generic.List<string>();
+            foreach (var tool in registry.Tools)
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"Tool : {tool.Name}");
+                sb.AppendLine($"File : {System.IO.Path.GetFileName(tool.FilePath)}");
+                sb.AppendLine($"Desc : {tool.Description}");
+                if (tool.Inputs.Count > 0)
+                    sb.AppendLine("Inputs:  " + string.Join(", ", tool.Inputs.ConvertAll(i => $"{i.Name} ({i.Type})")) );
+                else
+                    sb.AppendLine("Inputs:  (none)");
+                if (tool.Outputs.Count > 0)
+                    sb.AppendLine("Outputs: " + string.Join(", ", tool.Outputs.ConvertAll(o => $"{o.Name} ({o.Type})")) );
+                else
+                    sb.AppendLine("Outputs: (none)");
+                lines.Add(sb.ToString().TrimEnd());
+            }
+            return lines;
         }
 
         // ── Cleanup ───────────────────────────────────────────────────────────

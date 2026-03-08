@@ -146,7 +146,7 @@ namespace GrasshopperAgent
             {
                 var inputs = request.Arguments ?? new Dictionary<string, string>();
                 var outputNames = toolDef.Outputs.Select(o => o.Name);
-                var results = _runner.Execute(toolDef.FilePath, inputs, outputNames);
+                var results = _runner.Execute(toolDef.FilePath, inputs, outputNames, toolDef.ToolGroupName);
                 var summary = results.Count > 0
                     ? string.Join("\n", results.Select(kv => $"{kv.Key}: {kv.Value}"))
                     : "(no output)";
