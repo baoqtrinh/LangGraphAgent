@@ -56,6 +56,26 @@ namespace GrasshopperAgent
                 "Active", "A",
                 "Set to True to start the server, False to stop it",
                 GH_ParamAccess.item, false);
+
+            pm.AddBooleanParameter(
+                "ShowInCanvas", "V",
+                "When True, each tool's .gh file is opened in the active Grasshopper canvas so you can watch it run. " +
+                "When False (default) the file executes invisibly in memory.",
+                GH_ParamAccess.item, false);
+
+            pm.AddBooleanParameter(
+                "KeepOpen", "K",
+                "Only relevant when ShowInCanvas is True. " +
+                "When True, the document stays on the canvas after execution. " +
+                "When False (default) it is removed and disposed once outputs are collected.",
+                GH_ParamAccess.item, false);
+
+            pm.AddBooleanParameter(
+                "BakeToViewport", "B",
+                "When True (default), any geometry outputs are automatically baked into the Rhino document " +
+                "so they appear in the viewport. The baked GUID is appended to the tool result so the agent " +
+                "can reference it in follow-up tool calls.",
+                GH_ParamAccess.item, true);
         }
 
         // ── Output parameters ─────────────────────────────────────────────────
@@ -72,10 +92,16 @@ namespace GrasshopperAgent
             string folder = "";
             int port = 5100;
             bool active = false;
+            bool showInCanvas = false;
+            bool keepOpen = false;
+            bool bakeToViewport = true;
 
             if (!da.GetData("Folder", ref folder)) return;
             da.GetData("Port", ref port);
             da.GetData("Active", ref active);
+            da.GetData("ShowInCanvas", ref showInCanvas);
+            da.GetData("KeepOpen", ref keepOpen);
+            da.GetData("BakeToViewport", ref bakeToViewport);
 
             if (!active)
             {
@@ -108,7 +134,12 @@ namespace GrasshopperAgent
                 try
                 {
                     var registry = new ToolRegistry(folder);
-                    var runner = new GHScriptRunner();
+                    var runner = new GHScriptRunner
+                    {
+                        ShowInCanvas = showInCanvas,
+                        KeepOpen = keepOpen,
+                        BakeToViewport = bakeToViewport,
+                    };
                     _server = new HttpMCPServer(registry, runner, port);
                     _server.Start();
 
