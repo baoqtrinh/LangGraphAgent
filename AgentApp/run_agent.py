@@ -49,7 +49,7 @@ def _banner():
     print(HR2)
     print("  Design Agent  (terminal mode)")
     print(HR2)
-    print("  Commands:  reload · tools · quit")
+    print("  Commands:  reload · tools · plan on/off · history · quit")
     print(HR)
 
 
@@ -75,20 +75,26 @@ def _reload_tools():
         print(f"  [reload] error: {exc}")
 
 
-def _run(graph, user_input: str):
+def _run(graph, user_input: str, messages: list, force_plan: bool = False):
     from models.state import BoxState
-    state = BoxState(request={"user_input": user_input})
+    state = BoxState(
+        request={"user_input": user_input},
+        messages=list(messages),
+        # Skip classifier — route straight to planner when plan mode is on
+        request_type="plan" if force_plan else None,
+    )
     print()
     print(f"  ┊ input: {user_input}")
     try:
         result = graph.invoke(state, config={"recursion_limit": 50})
     except Exception as exc:
         print(f"\n  [error] {exc}")
-        return
+        return None
 
     answer = result.get("answer") or ""
-    request_type = result.get("request_type", "?")
+    request_type  = result.get("request_type", "?")
     tool_results  = result.get("tool_results") or {}
+    plan_results  = result.get("plan_results") or {}
 
     print(f"\n[{request_type}]")
     print(HR)
@@ -113,7 +119,14 @@ def _run(graph, user_input: str):
         for name, val in tool_results.items():
             print(f"    [{name}] {str(val)[:200]}")
 
+    if plan_results:
+        print(HR)
+        print("  Plan step results:")
+        for key, val in plan_results.items():
+            print(f"    [{key}] {str(val)[:200]}")
+
     print(HR)
+    return answer or None
 
 
 def main():
@@ -139,6 +152,9 @@ def main():
         print(f"  [graph] could not render image: {exc}")
     print()
 
+    conversation_messages: list = []   # persisted across turns in this session
+    plan_mode: bool = False              # toggled manually via 'plan on/off'
+
     while True:
         try:
             user_input = input("You: ").strip()
@@ -158,8 +174,42 @@ def main():
         elif user_input.lower() == "tools":
             _print_tools()
             continue
+        elif user_input.lower() in ("history", "mem"):
+            if not conversation_messages:
+                print("  (no conversation history yet)")
+            else:
+                for m in conversation_messages:
+                    tag = "You" if m["role"] == "user" else "Agent"
+                    print(f"  {tag}: {m['content'][:120]}")
+            print()
+            continue
+        elif user_input.lower() in ("plan on", "plan"):
+            plan_mode = True
+            print("  [plan mode] ON  — prompts will be decomposed into multi-tool sequences.")
+            print("                    Type 'plan off' to return to normal routing.")
+            print()
+            continue
+        elif user_input.lower() == "plan off":
+            plan_mode = False
+            print("  [plan mode] OFF  — back to normal routing.")
+            print()
+            continue
+        elif user_input.lower() == "plan status":
+            print(f"  [plan mode] {'ON' if plan_mode else 'OFF'}")
+            print()
+            continue
 
-        _run(graph, user_input)
+        if plan_mode:
+            print("  [plan mode ON]")
+
+        answer = _run(graph, user_input, conversation_messages, force_plan=plan_mode)
+
+        # Accumulate conversation memory (keep last 20 turns to avoid unbounded growth)
+        conversation_messages.append({"role": "user", "content": user_input})
+        if answer:
+            conversation_messages.append({"role": "assistant", "content": answer})
+        if len(conversation_messages) > 40:  # 20 turns × 2
+            conversation_messages = conversation_messages[-40:]
 
 
 if __name__ == "__main__":

@@ -149,10 +149,12 @@ namespace GrasshopperAgent
                     _lastFolder = folder;
                     _lastPort = port;
 
-                    da.SetData("Status", $"Running — {registry.Tools.Count} tool(s) loaded");
-                    da.SetData("Tools", registry.Tools.Count);
+                    var native = new NativeToolRegistry();
+                    int totalTools = native.Tools.Count + registry.Tools.Count;
+                    da.SetData("Status", $"Running — {totalTools} tool(s) loaded ({native.Tools.Count} built-in, {registry.Tools.Count} .gh)");
+                    da.SetData("Tools", totalTools);
                     da.SetData("URL", _server.BaseUrl);
-                    da.SetDataList("ToolDetails", BuildToolDetails(registry));
+                    da.SetDataList("ToolDetails", BuildToolDetails(native, registry));
                 }
                 catch (Exception ex)
                 {
@@ -166,33 +168,60 @@ namespace GrasshopperAgent
             else
             {
                 var liveRegistry = new ToolRegistry(folder);
+                var liveNative   = new NativeToolRegistry();
+                int totalTools   = liveNative.Tools.Count + liveRegistry.Tools.Count;
                 da.SetData("Status", $"Running on port {port}");
-                da.SetData("Tools", liveRegistry.Tools.Count);
+                da.SetData("Tools", totalTools);
                 da.SetData("URL", _server?.BaseUrl ?? "");
-                da.SetDataList("ToolDetails", BuildToolDetails(liveRegistry));
+                da.SetDataList("ToolDetails", BuildToolDetails(liveNative, liveRegistry));
             }
         }
 
         // ── Tool detail formatter ────────────────────────────────────────────
-        private static System.Collections.Generic.List<string> BuildToolDetails(ToolRegistry registry)
+        private static System.Collections.Generic.List<string> BuildToolDetails(
+            NativeToolRegistry nativeRegistry, ToolRegistry ghRegistry)
         {
             var lines = new System.Collections.Generic.List<string>();
-            foreach (var tool in registry.Tools)
+
+            // ── Built-in C# tools ─────────────────────────────────────────────
+            foreach (var tool in nativeRegistry.Tools)
             {
-                var sb = new System.Text.StringBuilder();
-                sb.AppendLine($"Tool : {tool.Name}");
-                sb.AppendLine($"File : {System.IO.Path.GetFileName(tool.FilePath)}");
-                sb.AppendLine($"Desc : {tool.Description}");
-                if (tool.Inputs.Count > 0)
-                    sb.AppendLine("Inputs:  " + string.Join(", ", tool.Inputs.ConvertAll(i => $"{i.Name} ({i.Type})")) );
+                var def = tool.Definition;
+                var sb  = new System.Text.StringBuilder();
+                sb.AppendLine($"Tool : {def.Name}  [built-in]");
+                sb.AppendLine($"Desc : {def.Description}");
+                if (def.InputSchema?.Properties?.Count > 0)
+                    sb.AppendLine("Inputs:  " + string.Join(", ",
+                        System.Linq.Enumerable.Select(def.InputSchema.Properties,
+                            kv => $"{kv.Key} ({kv.Value.Type})")));
                 else
                     sb.AppendLine("Inputs:  (none)");
-                if (tool.Outputs.Count > 0)
-                    sb.AppendLine("Outputs: " + string.Join(", ", tool.Outputs.ConvertAll(o => $"{o.Name} ({o.Type})")) );
+                if (def.Outputs?.Count > 0)
+                    sb.AppendLine("Outputs: " + string.Join(", ",
+                        System.Linq.Enumerable.Select(def.Outputs, kv => kv.Key)));
                 else
                     sb.AppendLine("Outputs: (none)");
                 lines.Add(sb.ToString().TrimEnd());
             }
+
+            // ── .gh file tools ────────────────────────────────────────────────
+            foreach (var tool in ghRegistry.Tools)
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"Tool : {tool.Name}  [.gh]");
+                sb.AppendLine($"File : {System.IO.Path.GetFileName(tool.FilePath)}");
+                sb.AppendLine($"Desc : {tool.Description}");
+                if (tool.Inputs.Count > 0)
+                    sb.AppendLine("Inputs:  " + string.Join(", ", tool.Inputs.ConvertAll(i => $"{i.Name} ({i.Type})")));
+                else
+                    sb.AppendLine("Inputs:  (none)");
+                if (tool.Outputs.Count > 0)
+                    sb.AppendLine("Outputs: " + string.Join(", ", tool.Outputs.ConvertAll(o => $"{o.Name} ({o.Type})")));
+                else
+                    sb.AppendLine("Outputs: (none)");
+                lines.Add(sb.ToString().TrimEnd());
+            }
+
             return lines;
         }
 

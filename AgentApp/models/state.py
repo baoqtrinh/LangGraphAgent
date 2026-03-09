@@ -9,7 +9,7 @@ class BoxState(BaseModel):
     done: Optional[bool] = None
     
     # Input classification
-    request_type: Optional[Literal["design_building", "show_guide", "general_question", "use_tool", "unknown"]] = None
+    request_type: Optional[Literal["design_building", "show_guide", "general_question", "use_tool", "plan", "unknown"]] = None
 
     # GH tool execution results
     tool_results: Optional[Dict[str, Any]] = None
@@ -36,5 +36,14 @@ class BoxState(BaseModel):
     emergency_exits: Optional[bool] = None
     aspect_ratio: Optional[float] = None
     
+    # Plan execution (chained multi-tool tasks)
+    plan: Optional[List[Dict[str, Any]]] = None          # [{step, tool, intent, output_key}, ...]
+    plan_step: int = 0                                    # index of next step to execute
+    plan_results: Dict[str, Any] = Field(default_factory=dict)  # {output_key: result_str}
+
+    # Conversation memory – list of {"role": "user"|"assistant", "content": "..."}
+    # Populated by the REPL so nodes have cross-turn context
+    messages: List[Dict[str, str]] = Field(default_factory=list)
+
     # History tracking
     history: List[Dict[str, Any]] = Field(default_factory=list)

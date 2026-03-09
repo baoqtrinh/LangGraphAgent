@@ -2,6 +2,12 @@
 GH Tool execution node.
 The LLM picks which loaded MCP tool to call and with what args, then
 formats the result as a natural-language answer.
+
+Vision tools (capture_viewport, etc.)
+--------------------------------------
+If a tool result is a JSON object that contains an "image_base64" key,
+the node automatically forwards it to the vision-capable LLM so a VLM
+can reason about the rendered scene.
 """
 import json
 import textwrap
@@ -14,11 +20,56 @@ from utils.llm_utils import chat_llm
 
 _HR = "─" * 72
 
+
 def _think(label: str, text: str):
     prefix = f"  ┊ {label}: "
     body = str(text).strip().replace("\n", " ")
     for i, line in enumerate(textwrap.wrap(body, width=68)):
         print((prefix if i == 0 else " " * len(prefix)) + line)
+
+
+def _reason_about_image(base64_png: str, user_input: str, view_name: str = "") -> str:
+    """Send a captured viewport image to the LLM for visual reasoning."""
+    label = f" ({view_name})" if view_name else ""
+    print(f"  ┊ image captured{label} — asking VLM to reason about the scene...")
+    try:
+        msg = HumanMessage(content=[
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/png;base64,{base64_png}"},
+            },
+            {
+                "type": "text",
+                "text": (
+                    f"This is a screenshot of the current Rhino 3D viewport{label}.\n"
+                    f"Original user request: \"{user_input}\"\n\n"
+                    "Describe what you see: geometry types, approximate sizes, any issues "
+                    "or suggestions for the design. Be concise."
+                ),
+            },
+        ])
+        resp = chat_llm._generate([msg])
+        return resp.generations[0].message.content
+    except Exception as exc:
+        return f"(VLM reasoning unavailable: {exc})"
+
+
+def _handle_image_result(result_str: str, user_input: str) -> str:
+    """If result_str is a JSON payload with image_base64, run VLM reasoning and return analysis."""
+    try:
+        data = json.loads(result_str)
+    except (json.JSONDecodeError, TypeError):
+        return result_str  # not JSON, return as-is
+
+    if not isinstance(data, dict) or "image_base64" not in data:
+        return result_str
+
+    base64_png = data["image_base64"]
+    view_name  = data.get("view_name", "")
+    w, h       = data.get("width", "?"), data.get("height", "?")
+    analysis   = _reason_about_image(base64_png, user_input, view_name)
+
+    return f"[Viewport capture {w}×{h} — {view_name}]\n\n{analysis}"
 
 
 def execute_gh_tool_fn(state: BoxState) -> BoxState:
@@ -88,6 +139,9 @@ def execute_gh_tool_fn(state: BoxState) -> BoxState:
             result_str = f"Error: tool '{tool_name}' not found."
         else:
             result_str = matching[0]._run(**tool_args)
+
+        # ── Vision result: send image to VLM instead of raw base64 ───────────
+        result_str = _handle_image_result(result_str, user_input)
 
         _think(f"{tool_name} result", result_str)
 

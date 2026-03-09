@@ -17,6 +17,7 @@ namespace GrasshopperAgent
     public class HttpMCPServer : IDisposable
     {
         private readonly ToolRegistry _registry;
+        private readonly NativeToolRegistry _native;
         private readonly GHScriptRunner _runner;
         private readonly int _port;
         private HttpListener? _listener;
@@ -36,8 +37,9 @@ namespace GrasshopperAgent
         public HttpMCPServer(ToolRegistry registry, GHScriptRunner runner, int port)
         {
             _registry = registry;
-            _runner = runner;
-            _port = port;
+            _native  = new NativeToolRegistry();
+            _runner  = runner;
+            _port    = port;
         }
 
         public void Start()
@@ -97,7 +99,10 @@ namespace GrasshopperAgent
                 }
                 else if (path == "/api/list_tools")
                 {
-                    await WriteJson(resp, new ListToolsResponse(_registry.ToMCPDefinitions()));
+                    // Native (built-in C#) tools first, then .gh-file tools
+                    var all = _native.ToMCPDefinitions();
+                    all.AddRange(_registry.ToMCPDefinitions());
+                    await WriteJson(resp, new ListToolsResponse(all));
                 }
                 else if (path == "/api/call_tool" && req.HttpMethod == "POST")
                 {
@@ -134,6 +139,24 @@ namespace GrasshopperAgent
                 return;
             }
 
+            // ── Try built-in C# tools first ───────────────────────────────────
+            var nativeTool = _native.FindByName(request.Name);
+            if (nativeTool is not null)
+            {
+                try
+                {
+                    var result = nativeTool.Execute(request.Arguments ?? new Dictionary<string, string>());
+                    await WriteJson(resp, new CallToolResponse(result, null));
+                }
+                catch (Exception ex)
+                {
+                    resp.StatusCode = 500;
+                    await WriteJson(resp, new CallToolResponse(null, ex.Message));
+                }
+                return;
+            }
+
+            // ── Fall through to .gh-file tools ────────────────────────────────
             var toolDef = _registry.FindByName(request.Name);
             if (toolDef is null)
             {

@@ -18,6 +18,12 @@ from nodes.building_design import (
     is_compliant_fn,
 )
 from nodes.tool_execution import execute_gh_tool_fn
+from nodes.plan_execution import (
+    planner_fn,
+    plan_step_fn,
+    plan_step_router,
+    plan_summary_fn,
+)
 
 
 def build_main_graph():
@@ -25,8 +31,11 @@ def build_main_graph():
 
     Branches
     ────────
+    plan             → planner → plan_step (loop) → plan_summary
+                         Chain multiple GH tools in sequence (plan mode).
+
     use_tool         → execute_gh_tool
-                         Draw / model geometry via GH scripts.
+                         Draw / model a single geometry via GH script.
 
     design_building  → retrieve_rules → thinking → execute_action
                      → draw_box → compliance_check → is_compliant
@@ -41,7 +50,12 @@ def build_main_graph():
     # ── Nodes ──────────────────────────────────────────────────────────────────
     g.add_node("classify_input",       classify_input_fn)
 
-    # ── Branch A: GH geometry tools ──────────────────────────────────────
+    # ── Branch A: Plan mode (multi-tool chaining) ────────────────────────
+    g.add_node("planner",              planner_fn)
+    g.add_node("plan_step",            plan_step_fn)
+    g.add_node("plan_summary",         plan_summary_fn)
+
+    # ── Branch B: Single GH geometry tool ────────────────────────────────
     g.add_node("execute_gh_tool",      execute_gh_tool_fn)
 
     # ── Branch B: Building design ReAct loop ───────────────────────────
@@ -69,6 +83,7 @@ def build_main_graph():
         "classify_input",
         lambda state: state.request_type,
         {
+            "plan":              "planner",
             "use_tool":          "execute_gh_tool",
             "design_building":   "retrieve_rules",
             "show_guide":        "show_guide",
@@ -77,10 +92,19 @@ def build_main_graph():
         },
     )
 
-    # Branch A terminal
+    # Branch A: plan mode loop
+    g.add_edge("planner", "plan_step")
+    g.add_conditional_edges(
+        "plan_step",
+        plan_step_router,
+        {"continue": "plan_step", "done": "plan_summary"},
+    )
+    g.add_edge("plan_summary", "__end__")
+
+    # Branch B terminal
     g.add_edge("execute_gh_tool", "__end__")
 
-    # Branch B: ReAct loop
+    # Branch C: ReAct loop
     g.add_edge("retrieve_rules",   "thinking")
     g.add_edge("thinking",         "execute_action")
     g.add_edge("execute_action",   "draw_box")
