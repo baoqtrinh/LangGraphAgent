@@ -1,7 +1,9 @@
 """
-LLM wrapper for any OpenAI-compatible endpoint (LM Studio, Ollama, etc.).
-Drop-in replacement for the old CloudflareLLM — now fully LangChain-compatible
-and supports function/tool calling.
+LLM wrapper — supports:
+  • Local OpenAI-compatible server (LM Studio, Ollama, …)  → LLM_PROVIDER=local
+  • Google Gemini (AI Studio)                              → LLM_PROVIDER=gemini
+
+Switch providers by setting LLM_PROVIDER in .env.local.
 """
 import json
 import os
@@ -19,14 +21,23 @@ from langchain_core.utils.function_calling import convert_to_openai_tool
 from langchain_core.messages import ToolCall
 
 try:
-    from app.config import LLM_ENDPOINT, LLM_MODEL, LLM_TEMPERATURE, LLM_TIMEOUT
+    from app.config import (
+        LLM_PROVIDER, LLM_ENDPOINT, LLM_MODEL, LLM_TEMPERATURE, LLM_TIMEOUT,
+        GOOGLE_API_KEY, GEMINI_MODEL,
+    )
 except ImportError:
     from dotenv import load_dotenv
-    load_dotenv()
+    _HERE = os.path.dirname(os.path.abspath(__file__))
+    _ROOT = os.path.dirname(_HERE)  # AgentApp/
+    load_dotenv(os.path.join(_ROOT, ".env"))
+    load_dotenv(os.path.join(_ROOT, ".env.local"), override=True)
+    LLM_PROVIDER = os.getenv("LLM_PROVIDER", "local").lower()
     LLM_ENDPOINT = os.getenv("LLM_ENDPOINT", "http://localhost:1234/v1/chat/completions")
     LLM_MODEL = os.getenv("LLM_MODEL", None)
     LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.2"))
     LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "60"))
+    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 
 
 class ChatLocalLLM(BaseChatModel):
@@ -156,6 +167,62 @@ class _SimpleLLMShim:
         return self._chat
 
 
-llm      = _SimpleLLMShim()          # default timeout (60s) — for full responses
-fast_llm = _SimpleLLMShim(timeout=15) # short timeout — for classify / yes-no calls
-chat_llm = ChatLocalLLM()
+# ── Gemini provider ───────────────────────────────────────────────────────────
+
+def _build_gemini_chat(timeout: Optional[int] = None) -> BaseChatModel:
+    """Return a LangChain ChatGoogleGenerativeAI instance for Gemini 2.5 Flash Lite."""
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+    except ImportError as exc:
+        raise ImportError(
+            "langchain-google-genai is required for Gemini support. "
+            "Run: pip install langchain-google-genai"
+        ) from exc
+
+    kwargs: Dict[str, Any] = {
+        "model": GEMINI_MODEL,
+        "google_api_key": GOOGLE_API_KEY,
+        "temperature": LLM_TEMPERATURE,
+    }
+    if timeout is not None:
+        kwargs["request_timeout"] = timeout
+    return ChatGoogleGenerativeAI(**kwargs)
+
+
+class _GeminiShim:
+    """Thin wrapper matching _SimpleLLMShim's interface, backed by Gemini."""
+
+    def __init__(self, timeout: Optional[int] = None) -> None:
+        self._chat = _build_gemini_chat(timeout)
+
+    def __call__(self, prompt: str, **_: Any) -> str:
+        result = self._chat.invoke([HumanMessage(content=prompt)])
+        return result.content
+
+    @property
+    def chat(self) -> BaseChatModel:
+        return self._chat
+
+
+# ── Active provider (swap by changing LLM_PROVIDER in .env.local) ────────────
+
+def _make_shim(timeout: Optional[int] = None):
+    if LLM_PROVIDER == "gemini":
+        return _GeminiShim(timeout)
+    return _SimpleLLMShim(timeout)
+
+
+def _make_chat_llm() -> BaseChatModel:
+    if LLM_PROVIDER == "gemini":
+        return _build_gemini_chat()
+    return ChatLocalLLM()
+
+
+# Re-export with the active provider so all nodes pick up the right backend.
+llm      = _make_shim()
+fast_llm = _make_shim(timeout=15)
+chat_llm = _make_chat_llm()
+
+print(f"  [llm] provider = {LLM_PROVIDER}"
+      + (f"  model = {GEMINI_MODEL}" if LLM_PROVIDER == "gemini"
+         else f"  endpoint = {LLM_ENDPOINT}"))

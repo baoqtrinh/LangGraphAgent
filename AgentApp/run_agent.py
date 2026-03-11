@@ -23,12 +23,23 @@ HR2 = "═" * 72
 
 
 def _check_llm() -> bool:
-    """Ping the LLM endpoint. Returns True if reachable."""
+    """Ping the LLM endpoint (local) or validate the API key (Gemini). Returns True if ready."""
     import requests
     try:
-        from app.config import LLM_ENDPOINT
+        from app.config import LLM_PROVIDER, LLM_ENDPOINT, GOOGLE_API_KEY, GEMINI_MODEL
     except ImportError:
+        LLM_PROVIDER = os.getenv("LLM_PROVIDER", "local").lower()
         LLM_ENDPOINT = os.getenv("LLM_ENDPOINT", "http://localhost:1234/v1/chat/completions")
+        GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+        GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+
+    if LLM_PROVIDER == "gemini":
+        if GOOGLE_API_KEY:
+            print(f"  [llm] Gemini  model = {GEMINI_MODEL}  (API key set)")
+            return True
+        else:
+            print("  [llm] Gemini selected but GOOGLE_API_KEY is not set in .env.local!")
+            return False
 
     # Derive the /models probe URL (works for LM Studio, Ollama, OpenAI-compat)
     base = LLM_ENDPOINT.rstrip("/").removesuffix("/chat/completions").removesuffix("/v1")
@@ -100,7 +111,8 @@ def _run(graph, user_input: str, messages: list, force_plan: bool = False):
     print(HR)
 
     if answer:
-        for line in textwrap.wrap(answer, width=70) or [answer]:
+        answer_str = answer if isinstance(answer, str) else "\n".join(str(a) for a in answer)
+        for line in textwrap.wrap(answer_str, width=70) or [answer_str]:
             print(" ", line)
     elif result.get("box"):
         box = result["box"]
@@ -126,7 +138,7 @@ def _run(graph, user_input: str, messages: list, force_plan: bool = False):
             print(f"    [{key}] {str(val)[:200]}")
 
     print(HR)
-    return answer or None
+    return (answer if isinstance(answer, str) else "\n".join(str(a) for a in answer)) if answer else None
 
 
 def main():
@@ -140,14 +152,12 @@ def main():
 
     # ── save + open graph image on startup ───────────────────────────────────
     try:
-        import subprocess
         os.makedirs("visualizations", exist_ok=True)
         png_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "visualizations", "graph.png")
         png_bytes = graph.get_graph().draw_mermaid_png()
         with open(png_path, "wb") as f:
             f.write(png_bytes)
         print(f"  [graph] saved → {png_path}")
-        subprocess.Popen(["start", png_path], shell=True)
     except Exception as exc:
         print(f"  [graph] could not render image: {exc}")
     print()

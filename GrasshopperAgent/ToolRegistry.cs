@@ -72,16 +72,23 @@ namespace GrasshopperAgent
         /// Opens a .gh file on the GH UI thread (read-only) and returns one
         /// <see cref="GHToolDefinition"/> per tool found inside.
         ///
-        /// Multi-tool mode (preferred):
+        /// Mode 1 — TOOL_* group labels (original):
         ///   – Any canvas Group whose label starts with "TOOL_" defines one tool.
-        ///     The name is the part after "TOOL_", normalised to snake_case.
         ///     Inside each such group place:
         ///       • A Group labelled INPUT  — sliders, panels and toggles become JSON inputs.
         ///       • A Group labelled OUTPUT — params / panels become JSON outputs.
         ///       • A Panel with NickName DESCRIPTION — its text is the LLM description.
         ///
-        /// Legacy / single-tool mode (automatic fallback):
-        ///   – If no TOOL_ groups are found the file is treated as a single tool and
+        /// Mode 2 — NAME + DESCRIPTION panels (new):
+        ///   – Any canvas Group that contains a Panel with NickName NAME defines one tool.
+        ///     The panel's text becomes the tool name (normalised to snake_case).
+        ///     Inside the same group place:
+        ///       • A Panel with NickName DESCRIPTION — its text is the LLM description.
+        ///       • A Group labelled INPUT  — sliders, panels and toggles become JSON inputs.
+        ///       • A Group labelled OUTPUT — params / panels become JSON outputs.
+        ///
+        /// Mode 3 — Legacy / single-tool (automatic fallback):
+        ///   – If neither of the above is found the file is treated as a single tool and
         ///     its name is derived from the file name (fully backward-compatible).
         /// </summary>
         private static List<GHToolDefinition> ScanGHFile(string filePath)
@@ -104,6 +111,7 @@ namespace GrasshopperAgent
 
                     // ── Classify top-level groups ──────────────────────────────
                     var toolGroups    = new List<GH_Group>();
+                    var otherGroups   = new List<GH_Group>(); // candidates for NAME-panel convention
                     GH_Group? legacyInput  = null;
                     GH_Group? legacyOutput = null;
                     GH_Panel? legacyDesc   = null;
@@ -119,6 +127,8 @@ namespace GrasshopperAgent
                                 legacyInput = g;
                             else if (lbl.Equals("OUTPUT", StringComparison.OrdinalIgnoreCase))
                                 legacyOutput = g;
+                            else
+                                otherGroups.Add(g);
                         }
                         else if (legacyDesc is null && obj is GH_Panel dp &&
                                  (dp.NickName?.Trim() ?? "").Equals("DESCRIPTION", StringComparison.OrdinalIgnoreCase))
@@ -130,7 +140,7 @@ namespace GrasshopperAgent
 
                     if (toolGroups.Count > 0)
                     {
-                        // ── Multi-tool: one definition per TOOL_ group ─────────
+                        // ── Mode 1: TOOL_* group labels ────────────────────────
                         foreach (var tg in toolGroups)
                         {
                             var groupLabel = tg.NickName!.Trim();
@@ -162,9 +172,72 @@ namespace GrasshopperAgent
                             results.Add(new GHToolDefinition(filePath, toolName, desc, inputs, outputs, groupLabel));
                         }
                     }
+                    else if (otherGroups.Count > 0)
+                    {
+                        // ── Mode 2: groups with NAME + DESCRIPTION panels ──────
+                        // Each group containing a Panel with NickName "NAME" defines
+                        // a tool. Name comes from that panel's text; description from
+                        // a sibling "DESCRIPTION" panel; inputs/outputs from nested
+                        // INPUT / OUTPUT sub-groups.
+                        foreach (var ng in otherGroups)
+                        {
+                            string? toolName = null;
+                            var desc    = "";
+                            var inputs  = new List<ParameterSpec>();
+                            var outputs = new List<ParameterSpec>();
+
+                            foreach (var memberId in ng.ObjectIDs)
+                            {
+                                if (!byId.TryGetValue(memberId, out var m)) continue;
+
+                                if (m is GH_Panel panel)
+                                {
+                                    var nick = panel.NickName?.Trim() ?? "";
+                                    if (nick.Equals("NAME", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        var nameText = panel.UserText?.Trim() ?? "";
+                                        if (!string.IsNullOrEmpty(nameText))
+                                            toolName = NormalizeToolName(nameText);
+                                    }
+                                    else if (nick.Equals("DESCRIPTION", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        var t = panel.UserText?.Trim() ?? "";
+                                        if (!string.IsNullOrEmpty(t)) desc = t;
+                                    }
+                                }
+                                else if (m is GH_Group sub)
+                                {
+                                    var subLbl = sub.NickName?.Trim() ?? "";
+                                    if (subLbl.Equals("INPUT",  StringComparison.OrdinalIgnoreCase))
+                                        CollectInputParams(sub.ObjectIDs, byId, inputs);
+                                    else if (subLbl.Equals("OUTPUT", StringComparison.OrdinalIgnoreCase))
+                                        CollectOutputParams(sub.ObjectIDs, byId, outputs);
+                                }
+                            }
+
+                            if (toolName is not null)
+                            {
+                                if (string.IsNullOrEmpty(desc)) desc = $"Run Grasshopper script: {toolName}";
+                                results.Add(new GHToolDefinition(filePath, toolName, desc, inputs, outputs, ng.NickName ?? ""));
+                            }
+                        }
+
+                        // If no groups had a NAME panel, fall back to legacy mode
+                        if (results.Count == 0)
+                        {
+                            var filename = Path.GetFileName(filePath);
+                            var toolName = FileNameToToolName(filename);
+                            var desc     = legacyDesc?.UserText?.Trim() ?? $"Run Grasshopper script: {filename}";
+                            var inputs   = new List<ParameterSpec>();
+                            var outputs  = new List<ParameterSpec>();
+                            if (legacyInput  is not null) CollectInputParams(legacyInput.ObjectIDs,   byId, inputs);
+                            if (legacyOutput is not null) CollectOutputParams(legacyOutput.ObjectIDs, byId, outputs);
+                            results.Add(new GHToolDefinition(filePath, toolName, desc, inputs, outputs));
+                        }
+                    }
                     else
                     {
-                        // ── Legacy single-tool: name from file name ────────────
+                        // ── Mode 3: legacy — single tool, name from filename ───
                         var filename = Path.GetFileName(filePath);
                         var toolName = FileNameToToolName(filename);
                         var desc     = legacyDesc?.UserText?.Trim() ?? $"Run Grasshopper script: {filename}";
