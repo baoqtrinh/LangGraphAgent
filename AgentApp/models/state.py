@@ -1,5 +1,6 @@
+import operator
 from pydantic import BaseModel, Field
-from typing import Dict, Any, List, Optional, Union, Literal
+from typing import Annotated, Dict, Any, List, Optional, Union, Literal
 
 class BoxState(BaseModel):
     """State model for the architectural assistant agent."""
@@ -42,8 +43,9 @@ class BoxState(BaseModel):
     plan_results: Dict[str, Any] = Field(default_factory=dict)  # {output_key: result_str}
 
     # Conversation memory – list of {"role": "user"|"assistant", "content": "..."}
-    # Populated by the REPL so nodes have cross-turn context
-    messages: List[Dict[str, str]] = Field(default_factory=list)
+    # Annotated with operator.add so LangGraph accumulates messages across turns
+    # when a MemorySaver checkpointer is used (appended, not replaced).
+    messages: Annotated[List[Dict[str, str]], operator.add] = Field(default_factory=list)
 
     # History tracking
     history: List[Dict[str, Any]] = Field(default_factory=list)

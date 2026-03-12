@@ -8,7 +8,7 @@
 # ── LLM Provider ─────────────────────────────────────────────────────────────
 # "local"  → OpenAI-compatible local server (e.g. LM Studio)
 # "gemini" → Google Gemini via google-genai SDK
-LLM_PROVIDER = "local"
+LLM_PROVIDER = "gemini"
 
 # ── Local LLM (OpenAI-compatible endpoint, e.g. LM Studio) ───────────────────
 LLM_ENDPOINT    = "http://localhost:1234/v1/chat/completions"

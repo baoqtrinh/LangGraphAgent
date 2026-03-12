@@ -1,4 +1,4 @@
-"""Plan execution nodes — multi-tool chaining.
+"""Plan execution nodes — multi-tool chaining (plan branch).
 
 Flow
 ────
@@ -21,6 +21,7 @@ from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from config.prompts import build_csharp_system_prompt
 from models.state import BoxState
 from utils.llm_utils import chat_llm, fast_llm
 
@@ -157,16 +158,22 @@ def plan_step_fn(state: BoxState) -> BoxState:
 
     tool_list = "\n".join(f"- {t.name}: {t.description}" for t in TOOL_CLASSES)
 
-    system_msg = SystemMessage(content=(
-        f"You are executing step {step_num} of {total} in a multi-step Grasshopper design plan.\n"
+    base = (
+        f"You are executing step {step_num} of {total} in a multi-step Rhino/Grasshopper design plan.\n"
         f"Step intent: {intent}\n"
         f"Preferred tool: {target_tool}\n"
         f"{prev_context}\n\n"
-        f"Available tools:\n{tool_list}\n\n"
         "Call the correct tool with concrete numeric arguments based on the user's original "
         "request and any relevant previous step results. "
         "Do NOT use placeholder strings — only real values."
-    ))
+    )
+    tool_names = [t.name for t in TOOL_CLASSES]
+    prompt_content = (
+        build_csharp_system_prompt(base, tool_list)
+        if target_tool == "run_csharp_script" or "run_csharp_script" in tool_names
+        else f"{base}\n\nAvailable tools:\n{tool_list}"
+    )
+    system_msg = SystemMessage(content=prompt_content)
     user_msg = HumanMessage(content=state.request.get("user_input", ""))
 
     llm_with_tools = chat_llm.bind_tools(TOOL_CLASSES)
@@ -195,7 +202,7 @@ def plan_step_fn(state: BoxState) -> BoxState:
             result_str = matching[0]._run(**tool_args)
 
         # Vision result: forward image to VLM rather than passing raw base64
-        from nodes.tool_execution import _handle_image_result
+        from nodes.tool_use import _handle_image_result
         result_str = _handle_image_result(result_str, state.request.get("user_input", ""))
 
         _think(f"{tool_name} result", result_str)

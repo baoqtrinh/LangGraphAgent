@@ -1,5 +1,6 @@
 """
-GH Tool execution node.
+GH Tool execution node — use_tool branch.
+
 The LLM picks which loaded MCP tool to call and with what args, then
 formats the result as a natural-language answer.
 
@@ -15,8 +16,9 @@ from typing import Any, Dict, List
 
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
+from config.prompts import build_csharp_system_prompt
 from models.state import BoxState
-from utils.llm_utils import chat_llm
+from utils.llm_utils import chat_llm, reason_about_image
 
 _HR = "─" * 72
 
@@ -29,29 +31,15 @@ def _think(label: str, text: str):
 
 
 def _reason_about_image(base64_png: str, user_input: str, view_name: str = "") -> str:
-    """Send a captured viewport image to the LLM for visual reasoning."""
-    label = f" ({view_name})" if view_name else ""
-    print(f"  ┊ image captured{label} — asking VLM to reason about the scene...")
-    try:
-        msg = HumanMessage(content=[
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:image/png;base64,{base64_png}"},
-            },
-            {
-                "type": "text",
-                "text": (
-                    f"This is a screenshot of the current Rhino 3D viewport{label}.\n"
-                    f"Original user request: \"{user_input}\"\n\n"
-                    "Describe what you see: geometry types, approximate sizes, any issues "
-                    "or suggestions for the design. Be concise."
-                ),
-            },
-        ])
-        resp = chat_llm._generate([msg])
-        return resp.generations[0].message.content
-    except Exception as exc:
-        return f"(VLM reasoning unavailable: {exc})"
+    """Delegate to the shared utility in llm_utils."""
+    print(f"  ┊ image captured — asking VLM to reason about the scene...")
+    question = (
+        f"This is a screenshot of the current Rhino 3D viewport.\n"
+        f"Original user request: \"{user_input}\"\n\n"
+        "Describe what you see: geometry types, approximate sizes, any issues "
+        "or suggestions for the design. Be concise."
+    )
+    return reason_about_image(base64_png, question=question, view_name=view_name)
 
 
 def _handle_image_result(result_str: str, user_input: str) -> str:
@@ -93,12 +81,19 @@ def execute_gh_tool_fn(state: BoxState) -> BoxState:
     tool_list = "\n".join(
         f"- `{t.name}`: {t.description}" for t in TOOL_CLASSES
     )
-    print(f"  ┊ tools available: {', '.join(t.name for t in TOOL_CLASSES)}")
+    tool_names = [t.name for t in TOOL_CLASSES]
+    print(f"  ┊ tools available: {', '.join(tool_names)}")
+
+    has_csharp = "run_csharp_script" in tool_names
+    base = (
+        "You are a Rhino/Grasshopper design assistant. "
+        "Pick the most relevant tool, supply the required arguments, and call it. "
+        "If several tools are needed, call them in sequence."
+    )
     system_prompt = (
-        "You are a design assistant. The user wants to run one of the following "
-        "Grasshopper tools. Pick the most relevant tool, supply the required "
-        "arguments, and call it. If several tools are needed, call them in sequence.\n\n"
-        f"Available tools:\n{tool_list}"
+        build_csharp_system_prompt(base, tool_list)
+        if has_csharp
+        else f"{base}\n\nAvailable tools:\n{tool_list}"
     )
 
     llm_with_tools = chat_llm.bind_tools(TOOL_CLASSES)
@@ -107,10 +102,9 @@ def execute_gh_tool_fn(state: BoxState) -> BoxState:
         HumanMessage(content=user_input),
     ]
 
-    # First LLM call — may request tool call(s)
+    # First LLM call — use .invoke() so RunnableBinding (Gemini) passes tools correctly
     print(f"  ┊ asking LLM which tool to call...")
-    response = llm_with_tools._generate(messages)
-    ai_msg = response.generations[0].message
+    ai_msg = llm_with_tools.invoke(messages)
 
     if ai_msg.content:
         _think("LLM thought", ai_msg.content)
@@ -153,8 +147,7 @@ def execute_gh_tool_fn(state: BoxState) -> BoxState:
     # Second LLM call — synthesise results into natural language
     print(f"  ┊ synthesising answer...")
     followup_messages = [*messages, ai_msg, *tool_messages]
-    final_response = chat_llm._generate(followup_messages)
-    final_answer = final_response.generations[0].message.content
+    final_answer = chat_llm.invoke(followup_messages).content
 
     state.answer = final_answer
     state.tool_results = results

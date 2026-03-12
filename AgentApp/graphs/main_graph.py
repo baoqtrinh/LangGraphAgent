@@ -17,8 +17,8 @@ from nodes.building_design import (
     compliance_check_fn,
     is_compliant_fn,
 )
-from nodes.tool_execution import execute_gh_tool_fn
-from nodes.plan_execution import (
+from nodes.tool_use import execute_gh_tool_fn
+from nodes.planning import (
     planner_fn,
     plan_step_fn,
     plan_step_router,
@@ -26,7 +26,7 @@ from nodes.plan_execution import (
 )
 
 
-def build_main_graph():
+def build_main_graph(checkpointer=None):
     """Build the LangGraph agent.
 
     Branches
@@ -52,7 +52,7 @@ def build_main_graph():
 
     # ── Branch A: Plan mode (multi-tool chaining) ────────────────────────
     g.add_node("planner",              planner_fn)
-    g.add_node("plan_step",            plan_step_fn)
+    g.add_node("execute_plan_step",    plan_step_fn)
     g.add_node("plan_summary",         plan_summary_fn)
 
     # ── Branch B: Single GH geometry tool ────────────────────────────────
@@ -93,11 +93,11 @@ def build_main_graph():
     )
 
     # Branch A: plan mode loop
-    g.add_edge("planner", "plan_step")
+    g.add_edge("planner", "execute_plan_step")
     g.add_conditional_edges(
-        "plan_step",
+        "execute_plan_step",
         plan_step_router,
-        {"continue": "plan_step", "done": "plan_summary"},
+        {"continue": "execute_plan_step", "done": "plan_summary"},
     )
     g.add_edge("plan_summary", "__end__")
 
@@ -130,4 +130,4 @@ def build_main_graph():
     g.add_edge("answer_with_search",    "__end__")
     g.add_edge("answer_without_search", "__end__")
 
-    return g.compile()
+    return g.compile(checkpointer=checkpointer)

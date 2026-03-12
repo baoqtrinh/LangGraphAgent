@@ -223,6 +223,44 @@ llm      = _make_shim()
 fast_llm = _make_shim(timeout=15)
 chat_llm = _make_chat_llm()
 
+
+def reason_about_image(
+    base64_png: str,
+    question: str = "",
+    view_name: str = "",
+) -> str:
+    """
+    Send a base64-encoded PNG from a Rhino viewport capture to the VLM and
+    return its text response.
+
+    Parameters
+    ----------
+    base64_png : str
+        Base64-encoded PNG string (from capture_viewport's image_base64 field).
+    question : str
+        What to ask about the image. Defaults to a general scene description.
+    view_name : str
+        Optional viewport name to include in the prompt context.
+    """
+    label = f" ({view_name})" if view_name else ""
+    prompt_text = question or (
+        f"This is a screenshot of the Rhino 3D viewport{label}. "
+        "Describe what geometry you see: types, approximate sizes, positions, "
+        "and any observations about the design. Be concise."
+    )
+    msg = HumanMessage(content=[
+        {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{base64_png}"},
+        },
+        {"type": "text", "text": prompt_text},
+    ])
+    try:
+        result = chat_llm._generate([msg])
+        return result.generations[0].message.content
+    except Exception as exc:
+        return f"(VLM reasoning unavailable: {exc})"
+
 print(f"  [llm] provider = {LLM_PROVIDER}"
       + (f"  model = {GEMINI_MODEL}" if LLM_PROVIDER == "gemini"
          else f"  endpoint = {LLM_ENDPOINT}"))

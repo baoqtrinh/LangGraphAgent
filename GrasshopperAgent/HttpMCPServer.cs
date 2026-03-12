@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using static GrasshopperAgent.Protocol.ArgumentHelpers;
 
 namespace GrasshopperAgent
 {
@@ -17,7 +18,7 @@ namespace GrasshopperAgent
     public class HttpMCPServer : IDisposable
     {
         private readonly ToolRegistry _registry;
-        private readonly NativeToolRegistry _native;
+        private readonly NativeTools.NativeToolRegistry _native;
         private readonly GHScriptRunner _runner;
         private readonly int _port;
         private HttpListener? _listener;
@@ -37,7 +38,7 @@ namespace GrasshopperAgent
         public HttpMCPServer(ToolRegistry registry, GHScriptRunner runner, int port)
         {
             _registry = registry;
-            _native  = new NativeToolRegistry();
+            _native  = new NativeTools.NativeToolRegistry();
             _runner  = runner;
             _port    = port;
         }
@@ -145,7 +146,7 @@ namespace GrasshopperAgent
             {
                 try
                 {
-                    var result = nativeTool.Execute(request.Arguments ?? new Dictionary<string, string>());
+                    var result = nativeTool.Execute(ArgumentHelpers.Normalize(request.Arguments));
                     await WriteJson(resp, new CallToolResponse(result, null));
                 }
                 catch (Exception ex)
@@ -167,7 +168,7 @@ namespace GrasshopperAgent
 
             try
             {
-                var inputs = request.Arguments ?? new Dictionary<string, string>();
+                var inputs = ArgumentHelpers.Normalize(request.Arguments);
                 var outputNames = toolDef.Outputs.Select(o => o.Name);
                 var results = _runner.Execute(toolDef.FilePath, inputs, outputNames, toolDef.ToolGroupName);
                 var summary = results.Count > 0

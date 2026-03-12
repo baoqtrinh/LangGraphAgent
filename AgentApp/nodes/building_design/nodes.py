@@ -8,17 +8,14 @@ def retrieve_rules_fn(state: BoxState) -> BoxState:
         {
             "id": "depth_constraint",
             "description": "Building depth must not exceed 50 meters for safety reasons",
-            "validation": lambda box: box.get("depth", 0) <= 50
         },
         {
             "id": "ratio_constraint",
             "description": "Width to depth ratio must be at least 0.33 (1:3) for structural stability",
-            "validation": lambda box: box.get("aspect_ratio", 0) >= 0.33
         },
         {
             "id": "emergency_exit_constraint",
             "description": "Buildings must have emergency exits",
-            "validation": lambda box: box.get("emergency_exits", False) == True
         }
     ]
     
@@ -64,20 +61,30 @@ def thinking_fn(state: BoxState) -> BoxState:
 
 def action_fn(state: BoxState) -> BoxState:
     """Decide what action to take based on thinking."""
-    # Generate action based on thought and issues
+    import math
     issues = state.issues or []
-    box = state.box or {}
-    
-    # Note: Replace this with your actual LLM implementation
-    # Simulate action for now
-    if any("depth exceeds maximum" in issue for issue in issues):
-        state.action = {"action": "adjust_width", "params": {"width": 18}}
-    elif any("ratio" in issue for issue in issues):
-        state.action = {"action": "adjust_width", "params": {"width": 18}}
-    elif any("emergency exits" in issue for issue in issues):
+    area = state.request.get("area", 800)
+
+    # Compute the minimum width that satisfies both geometry constraints:
+    #   depth = area / width ≤ 50  →  width ≥ area / 50
+    #   ratio = width / depth ≥ 0.33  →  width² ≥ 0.33 * area  →  width ≥ sqrt(0.33 * area)
+    # Take the larger of the two, add a small margin and round up.
+    min_for_depth = area / 50.0
+    min_for_ratio = math.sqrt(0.33 * area)
+    required_width = math.ceil(max(min_for_depth, min_for_ratio)) + 1
+
+    has_depth  = any("depth_constraint"          in i for i in issues)
+    has_ratio  = any("ratio_constraint"          in i for i in issues)
+    has_exits  = any("emergency_exit_constraint" in i for i in issues)
+
+    if has_depth or has_ratio:
+        # Set width large enough to resolve both at once
+        state.action = {"action": "adjust_width", "params": {"width": required_width}}
+    elif has_exits:
         state.action = {"action": "add_emergency_exits", "params": {"emergency_exits": True}}
     else:
-        state.action = {"action": "adjust_width", "params": {"width": state.current_width + 4 if state.current_width else 16}}
+        # No known issues — nudge width slightly and let compliance re-evaluate
+        state.action = {"action": "adjust_width", "params": {"width": (state.current_width or 16) + 4}}
     
     # Add to history
     state.history.append({
@@ -169,11 +176,16 @@ def compliance_check_fn(state: BoxState) -> BoxState:
     rules = state.rules or []
     
     # Check compliance against all rules
+    _validators = {
+        "depth_constraint": lambda b: b.get("depth", 0) <= 50,
+        "ratio_constraint": lambda b: b.get("aspect_ratio", 0) >= 0.33,
+        "emergency_exit_constraint": lambda b: b.get("emergency_exits", False) is True,
+    }
     issues = []
     for rule in rules:
         try:
-            is_valid = rule["validation"](box)
-            if not is_valid:
+            validate = _validators.get(rule["id"])
+            if validate and not validate(box):
                 issues.append(f"Failed {rule['id']}: {rule['description']}")
         except Exception as e:
             issues.append(f"Error checking {rule['id']}: {str(e)}")

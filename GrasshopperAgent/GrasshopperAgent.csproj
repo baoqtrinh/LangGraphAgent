@@ -25,6 +25,14 @@
   
   <ItemGroup>
     <PackageReference Include="Grasshopper" Version="8.0.23304.9001" ExcludeAssets="runtime" />
+    <!--
+      Roslyn scripting — enables the run_csharp_script native tool.
+      ExcludeAssets="runtime" is intentionally NOT set so the Roslyn DLLs are
+      copied alongside the .gha. With EnableDynamicLoading=true each plugin
+      gets its own AssemblyLoadContext, so they won't clash with Rhino's own
+      Roslyn (if any).
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.9.2" />
   </ItemGroup>
   
   <!-- For Windows only builds -->

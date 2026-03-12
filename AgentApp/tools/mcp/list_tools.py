@@ -1,12 +1,12 @@
 """
-list_mcp_tools.py
-─────────────────
+list_tools.py
+─────────────
 Standalone script — run directly to print every tool exposed by the
 running GH MCP Server (the Grasshopper plugin).
 
 Usage (from any directory):
-    python tools/list_mcp_tools.py
-    python tools/list_mcp_tools.py --endpoint http://localhost:5100
+    python tools/mcp/list_tools.py
+    python tools/mcp/list_tools.py --endpoint http://localhost:5100
 """
 
 import argparse
@@ -14,8 +14,8 @@ import sys
 import os
 
 # ── Ensure AgentApp root is importable when run as a script ────────────────
-_HERE = os.path.dirname(os.path.abspath(__file__))   # .../AgentApp/tools
-_ROOT = os.path.dirname(_HERE)                        # .../AgentApp
+_HERE = os.path.dirname(os.path.abspath(__file__))   # .../AgentApp/tools/mcp
+_ROOT = os.path.dirname(os.path.dirname(_HERE))       # .../AgentApp
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
@@ -93,7 +93,6 @@ def list_tools(endpoint: str, timeout: int) -> None:
         else:
             print("  Outputs: (none)")
 
-        # Outputs are not in the MCP schema; show a note if present in categories
         categories = tool.get("categories", [])
         if categories:
             print(f"  Categories: {', '.join(categories)}")

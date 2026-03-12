@@ -83,9 +83,14 @@ namespace GrasshopperAgent
         {
             pm.AddTextParameter("Status", "S", "Server status message", GH_ParamAccess.item);
             pm.AddIntegerParameter("Tools", "T", "Number of GH tools loaded", GH_ParamAccess.item);
-            pm.AddTextParameter("URL", "U", "Base URL of the running server", GH_ParamAccess.item);            pm.AddTextParameter("ToolDetails", "D",
-                "One entry per loaded tool showing its name, description, inputs and outputs.",
-                GH_ParamAccess.list);        }
+            pm.AddTextParameter("URL", "U", "Base URL of the running server", GH_ParamAccess.item);
+            pm.AddTextParameter("BuiltInTools", "N",
+                "One entry per built-in C# tool (name, description, inputs, outputs).",
+                GH_ParamAccess.list);
+            pm.AddTextParameter("GHTools", "G",
+                "One entry per .gh file tool (name, file, description, inputs, outputs).",
+                GH_ParamAccess.list);
+        }
 
         // ── Solve ─────────────────────────────────────────────────────────────
         protected override void SolveInstance(IGH_DataAccess da)
@@ -110,7 +115,8 @@ namespace GrasshopperAgent
                 da.SetData("Status", "Server stopped");
                 da.SetData("Tools", 0);
                 da.SetData("URL", "");
-                da.SetDataList("ToolDetails", new string[0]);
+                da.SetDataList("BuiltInTools", new string[0]);
+                da.SetDataList("GHTools", new string[0]);
                 return;
             }
 
@@ -121,7 +127,8 @@ namespace GrasshopperAgent
                 da.SetData("Status", $"Error: folder not found — {folder}");
                 da.SetData("Tools", 0);
                 da.SetData("URL", "");
-                da.SetDataList("ToolDetails", new string[0]);
+                da.SetDataList("BuiltInTools", new string[0]);
+                da.SetDataList("GHTools", new string[0]);
                 return;
             }
 
@@ -149,12 +156,13 @@ namespace GrasshopperAgent
                     _lastFolder = folder;
                     _lastPort = port;
 
-                    var native = new NativeToolRegistry();
+                    var native = new NativeTools.NativeToolRegistry();
                     int totalTools = native.Tools.Count + registry.Tools.Count;
                     da.SetData("Status", $"Running — {totalTools} tool(s) loaded ({native.Tools.Count} built-in, {registry.Tools.Count} .gh)");
                     da.SetData("Tools", totalTools);
                     da.SetData("URL", _server.BaseUrl);
-                    da.SetDataList("ToolDetails", BuildToolDetails(native, registry));
+                    da.SetDataList("BuiltInTools", BuildNativeToolDetails(native));
+                    da.SetDataList("GHTools", BuildGHToolDetails(registry));
                 }
                 catch (Exception ex)
                 {
@@ -162,33 +170,33 @@ namespace GrasshopperAgent
                     da.SetData("Status", $"Error: {ex.Message}");
                     da.SetData("Tools", 0);
                     da.SetData("URL", "");
-                    da.SetDataList("ToolDetails", new string[0]);
+                    da.SetDataList("BuiltInTools", new string[0]);
+                    da.SetDataList("GHTools", new string[0]);
                 }
             }
             else
             {
                 var liveRegistry = new ToolRegistry(folder);
-                var liveNative   = new NativeToolRegistry();
+                var liveNative   = new NativeTools.NativeToolRegistry();
                 int totalTools   = liveNative.Tools.Count + liveRegistry.Tools.Count;
                 da.SetData("Status", $"Running on port {port}");
                 da.SetData("Tools", totalTools);
                 da.SetData("URL", _server?.BaseUrl ?? "");
-                da.SetDataList("ToolDetails", BuildToolDetails(liveNative, liveRegistry));
+                da.SetDataList("BuiltInTools", BuildNativeToolDetails(liveNative));
+                da.SetDataList("GHTools", BuildGHToolDetails(liveRegistry));
             }
         }
 
         // ── Tool detail formatter ────────────────────────────────────────────
-        private static System.Collections.Generic.List<string> BuildToolDetails(
-            NativeToolRegistry nativeRegistry, ToolRegistry ghRegistry)
+        private static System.Collections.Generic.List<string> BuildNativeToolDetails(
+            NativeTools.NativeToolRegistry nativeRegistry)
         {
             var lines = new System.Collections.Generic.List<string>();
-
-            // ── Built-in C# tools ─────────────────────────────────────────────
             foreach (var tool in nativeRegistry.Tools)
             {
                 var def = tool.Definition;
                 var sb  = new System.Text.StringBuilder();
-                sb.AppendLine($"Tool : {def.Name}  [built-in]");
+                sb.AppendLine($"Tool : {def.Name}");
                 sb.AppendLine($"Desc : {def.Description}");
                 if (def.InputSchema?.Properties?.Count > 0)
                     sb.AppendLine("Inputs:  " + string.Join(", ",
@@ -203,12 +211,17 @@ namespace GrasshopperAgent
                     sb.AppendLine("Outputs: (none)");
                 lines.Add(sb.ToString().TrimEnd());
             }
+            return lines;
+        }
 
-            // ── .gh file tools ────────────────────────────────────────────────
+        private static System.Collections.Generic.List<string> BuildGHToolDetails(
+            ToolRegistry ghRegistry)
+        {
+            var lines = new System.Collections.Generic.List<string>();
             foreach (var tool in ghRegistry.Tools)
             {
                 var sb = new System.Text.StringBuilder();
-                sb.AppendLine($"Tool : {tool.Name}  [.gh]");
+                sb.AppendLine($"Tool : {tool.Name}");
                 sb.AppendLine($"File : {System.IO.Path.GetFileName(tool.FilePath)}");
                 sb.AppendLine($"Desc : {tool.Description}");
                 if (tool.Inputs.Count > 0)
@@ -221,7 +234,6 @@ namespace GrasshopperAgent
                     sb.AppendLine("Outputs: (none)");
                 lines.Add(sb.ToString().TrimEnd());
             }
-
             return lines;
         }
 

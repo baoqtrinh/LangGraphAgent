@@ -10,6 +10,8 @@ import requests
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field, create_model
 
+from tools.base import BaseAgentTool
+
 # Import config from app/ package; fall back to env vars if run stand-alone
 try:
     from app.config import MCP_GH_ENDPOINT, MCP_TIMEOUT
@@ -23,8 +25,13 @@ logger = logging.getLogger(__name__)
 
 # ── Dynamic tool wrapper ──────────────────────────────────────────────────────
 
-class DynamicMCPTool(BaseTool):
-    """LangChain tool that forwards calls to the GH MCP HTTP server."""
+class DynamicMCPTool(BaseAgentTool):
+    """LangChain tool that forwards calls to the GH MCP HTTP server.
+
+    Instances are created automatically at import time (and on reload) from
+    the tool definitions served by the running Grasshopper plugin.
+    Do NOT instantiate this directly — use ``load_mcp_tools()`` instead.
+    """
 
     mcp_tool_name: str
     mcp_endpoint: str
@@ -93,7 +100,7 @@ def convert_json_schema_to_pydantic(tool_name: str, schema: Dict[str, Any]) -> t
             fields[prop_name] = (Optional[py_type], Field(default=None, description=desc))
 
     if not fields:
-        fields["_no_params"] = (Optional[str], Field(default=None, description="No parameters needed"))
+        fields["no_params"] = (Optional[str], Field(default=None, description="No parameters needed"))
 
     model_name = "".join(w.title() for w in tool_name.split("_")) + "Input"
     return create_model(model_name, **fields)
