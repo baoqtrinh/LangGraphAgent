@@ -12,11 +12,8 @@ import os
 import sys
 import textwrap
 
-from dotenv import load_dotenv
-
 # ── Bootstrap path so imports work when run directly ─────────────────────────
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-load_dotenv()
 
 HR  = "─" * 72
 HR2 = "═" * 72
@@ -25,13 +22,7 @@ HR2 = "═" * 72
 def _check_llm() -> bool:
     """Ping the LLM endpoint (local) or validate the API key (Gemini). Returns True if ready."""
     import requests
-    try:
-        from app.config import LLM_PROVIDER, LLM_ENDPOINT, GOOGLE_API_KEY, GEMINI_MODEL
-    except ImportError:
-        LLM_PROVIDER = os.getenv("LLM_PROVIDER", "local").lower()
-        LLM_ENDPOINT = os.getenv("LLM_ENDPOINT", "http://localhost:1234/v1/chat/completions")
-        GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-        GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+    from app.config import LLM_PROVIDER, LLM_ENDPOINT, GOOGLE_API_KEY, GEMINI_MODEL
 
     if LLM_PROVIDER == "gemini":
         if GOOGLE_API_KEY:
@@ -163,7 +154,9 @@ def main():
     print()
 
     conversation_messages: list = []   # persisted across turns in this session
-    plan_mode: bool = False              # toggled manually via 'plan on/off'
+
+    import settings as _s
+    plan_mode: bool = _s.PLAN_MODE       # default from settings.py; toggled via 'plan on/off'
 
     while True:
         try:
